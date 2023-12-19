@@ -161,6 +161,8 @@ By default only `GET` methods will be accepted. Other methods will respond with 
             return Response({"message": "Got some data!", "data": request.data})
         return Response({"message": "Hello, world!"})
 
+### Async support
+An async version of the `@api_view` decorator is available via the [adrf](https://github.com/em1208/adrf) package.
 
 ## API policy decorators
 
@@ -224,4 +226,3 @@ You may pass `None` in order to exclude the view from schema generation.
 [throttling]: throttling.md
 [schemas]: schemas.md
 [classy-drf]: http://www.cdrf.co
-

@@ -235,6 +235,11 @@ Alternatively, you can use the `url_name` attribute set by the `@action` decorat
 
 The `url_name` argument for `.reverse_action()` should match the same argument to the `@action` decorator. Additionally, this method can be used to reverse the default actions, such as `list` and `create`.
 
+
+## Async ViewSets
+
+An async version of the `ViewSet` class is available via the [adrf](https://github.com/em1208/adrf) package.
+
 ---
 
 # API Reference
