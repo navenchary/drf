@@ -424,6 +424,10 @@ You can provide arbitrary additional context by passing a `context` argument whe
 
 The context dictionary can be used within any serializer field logic, such as a custom `.to_representation()` method, by accessing the `self.context` attribute.
 
+## Async Serializer
+
+An async version of the `Serializer` class is available via the [adrf](https://github.com/em1208/adrf) package.
+
 ---
 
 # ModelSerializer
@@ -661,6 +665,10 @@ Called to generate a serializer field for the serializer's own `url` field. The 
 Called when the field name did not map to any model field or model property.
 The default implementation raises an error, although subclasses may customize this behavior.
 
+## Async ModelSerializer
+
+An async version of the `ModelSerializer` class is available via the [adrf](https://github.com/em1208/adrf) package.
+
 ---
 
 # HyperlinkedModelSerializer
@@ -862,6 +870,11 @@ Occasionally you might need to explicitly specify how the child and parent class
             # Instantiate the parent list serializer.
             return CustomListSerializer(*args, **kwargs)
 
+
+## Async ListSerializer
+
+An async version of the `ListSerializer` class is available via the [adrf](https://github.com/em1208/adrf) package.
+
 ---
 
 # BaseSerializer
@@ -1004,6 +1017,10 @@ The following class is an example of a generic serializer that can handle coerci
                     # Force anything else to its string representation.
                     output[attribute_name] = str(attribute)
             return output
+
+## Async BaseSerializer
+
+An async version of the `BaseSerializer` class is available via the [adrf](https://github.com/em1208/adrf) package.
 
 ---
 
