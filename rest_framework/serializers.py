@@ -1430,15 +1430,18 @@ class ModelSerializer(Serializer):
         """
         for parent_class in [model] + list(model._meta.parents):
             for unique_together in parent_class._meta.unique_together:
-                yield unique_together, model._default_manager
+                yield unique_together, model._default_manager, []
             for constraint in parent_class._meta.constraints:
                 if isinstance(constraint, models.UniqueConstraint) and len(constraint.fields) > 1:
-                    yield (
-                        constraint.fields,
-                        model._default_manager
-                        if constraint.condition is None
-                        else model._default_manager.filter(constraint.condition)
-                    )
+                    if constraint.condition is None:
+                        queryset = model._default_manager
+                        condition_fields = []
+                    else:
+                        queryset = model._default_manager.filter(constraint.condition)
+                        condition_fields = [
+                            f[0].split("__")[0] for f in constraint.condition.children
+                        ]
+                    yield (constraint.fields, queryset, condition_fields)
 
     def get_uniqueness_extra_kwargs(self, field_names, declared_fields, extra_kwargs):
         """
@@ -1470,9 +1473,9 @@ class ModelSerializer(Serializer):
 
         # Include each of the `unique_together` and `UniqueConstraint` field names,
         # so long as all the field names are included on the serializer.
-        for unique_together_list, queryset in self.get_unique_together_constraints(model):
-            if set(field_names).issuperset(unique_together_list):
-                unique_constraint_names |= set(unique_together_list)
+        for unique_together_list, queryset, condition_fields in self.get_unique_together_constraints(model):
+            if set(field_names).issuperset((*unique_together_list, *condition_fields)):
+                unique_constraint_names |= set((*unique_together_list, *condition_fields))
 
         # Now we have all the field names that have uniqueness constraints
         # applied, we can add the extra 'required=...' or 'default=...'
@@ -1592,12 +1595,12 @@ class ModelSerializer(Serializer):
         # Note that we make sure to check `unique_together` both on the
         # base model class, but also on any parent classes.
         validators = []
-        for unique_together, queryset in self.get_unique_together_constraints(self.Meta.model):
+        for unique_together, queryset, condition_fields in self.get_unique_together_constraints(self.Meta.model):
             # Skip if serializer does not map to all unique together sources
-            if not set(source_map).issuperset(unique_together):
+            if not set(source_map).issuperset((*unique_together, *condition_fields)):
                 continue
 
-            for source in unique_together:
+            for source in (*unique_together, *condition_fields):
                 assert len(source_map[source]) == 1, (
                     "Unable to create `UniqueTogetherValidator` for "
                     "`{model}.{field}` as `{serializer}` has multiple "
@@ -1614,9 +1617,9 @@ class ModelSerializer(Serializer):
                 )
 
             field_names = tuple(source_map[f][0] for f in unique_together)
+            condition_fields = tuple(source_map[f][0] for f in condition_fields)
             validator = UniqueTogetherValidator(
-                queryset=queryset,
-                fields=field_names
+                queryset=queryset, fields=field_names, condition_fields=condition_fields
             )
             validators.append(validator)
         return validators

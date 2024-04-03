@@ -99,10 +99,11 @@ class UniqueTogetherValidator:
     missing_message = _('This field is required.')
     requires_context = True
 
-    def __init__(self, queryset, fields, message=None):
+    def __init__(self, queryset, fields, message=None, condition_fields=None):
         self.queryset = queryset
         self.fields = fields
         self.message = message or self.message
+        self.condition_fields = [] if condition_fields is None else condition_fields
 
     def enforce_required_fields(self, attrs, serializer):
         """
@@ -114,7 +115,7 @@ class UniqueTogetherValidator:
 
         missing_items = {
             field_name: self.missing_message
-            for field_name in self.fields
+            for field_name in (*self.fields, *self.condition_fields)
             if serializer.fields[field_name].source not in attrs
         }
         if missing_items:
@@ -127,7 +128,7 @@ class UniqueTogetherValidator:
         # field names => field sources
         sources = [
             serializer.fields[field_name].source
-            for field_name in self.fields
+            for field_name in (*self.fields, *self.condition_fields)
         ]
 
         # If this is an update, then any unprovided field should
