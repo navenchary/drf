@@ -513,6 +513,11 @@ class UniqueConstraintModel(models.Model):
                 name="unique_constraint_model_together_uniq",
                 fields=('race_name', 'position'),
                 condition=models.Q(race_name='example'),
+            ),
+            models.UniqueConstraint(
+                name="unique_constraint_model_together_uniq2",
+                fields=('race_name', 'position'),
+                condition=models.Q(fancy_conditions__gte=10),
             )
         ]
 
@@ -563,12 +568,51 @@ class TestUniqueConstraintValidation(TestCase):
         to UniqueTogetherValidator as fields and queryset
         """
         serializer = UniqueConstraintSerializer()
-        assert len(serializer.validators) == 1
+        assert len(serializer.validators) == 2
         validator = serializer.validators[0]
         assert validator.fields == ('race_name', 'position')
         assert set(validator.queryset.values_list(flat=True)) == set(
             UniqueConstraintModel.objects.filter(race_name='example').values_list(flat=True)
         )
+
+    def test_unique_together_condition(self):
+        """
+        Fields used in UniqueConstraint's condition must be included
+        into queryset existence check
+        """
+        UniqueConstraintModel.objects.create(
+            race_name='condition',
+            position=1,
+            global_id=10,
+            fancy_conditions=10
+        )
+        serializer = UniqueConstraintSerializer(data={
+            'race_name': 'condition',
+            'position': 1,
+            'global_id': 11,
+            'fancy_conditions': 11,
+        })
+        assert serializer.is_valid()
+
+    def test_unique_together_condition_fields_required(self):
+        """
+        Fields used in UniqueConstraint's condition must be present in serializer
+        """
+        serializer = UniqueConstraintSerializer(data={
+            'race_name': 'condition',
+            'position': 1,
+            'global_id': 11,
+        })
+        assert not serializer.is_valid()
+        assert serializer.errors == {'fancy_conditions': ['This field is required.']}
+
+        class NoFieldsSerializer(serializers.ModelSerializer):
+            class Meta:
+                model = UniqueConstraintModel
+                fields = ('race_name', 'position', 'global_id')
+
+        serializer = NoFieldsSerializer()
+        assert len(serializer.validators) == 1
 
     def test_single_field_uniq_validators(self):
         """
@@ -579,7 +623,7 @@ class TestUniqueConstraintValidation(TestCase):
         extra_validators_qty = 2 if django_version[0] >= 5 else 0
         #
         serializer = UniqueConstraintSerializer()
-        assert len(serializer.validators) == 1
+        assert len(serializer.validators) == 2
         validators = serializer.fields['global_id'].validators
         assert len(validators) == 1 + extra_validators_qty
         assert validators[0].queryset == UniqueConstraintModel.objects
